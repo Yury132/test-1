@@ -3,18 +3,24 @@ package config
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"time"
 
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
+
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/pkgerrors"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
 )
 
-const formatJSON = "json"
+const (
+	formatJSON  = "json"
+	redirectURL = "http://localhost:8080/callback"
+)
 
 type Config struct {
 	Server struct {
@@ -29,17 +35,29 @@ type Config struct {
 	}
 
 	DB struct {
-		Address  string `envconfig:"DB_ADDRESS"`
-		Name     string `envconfig:"DB_NAME"`
-		User     string `envconfig:"DB_USER"`
-		Password string `envconfig:"DB_PASSWORD"`
-		Port     string `envconfig:"DB_PORT"`
-		MaxConn  int    `envconfig:"DB_MAX_CONN"`
+		Address  string `envconfig:"DB_ADDRESS" default:"localhost"`
+		Name     string `envconfig:"DB_NAME" default:"mydb"`
+		User     string `envconfig:"DB_USER" default:"root"`
+		Password string `envconfig:"DB_PASSWORD" default:"mydbpass"`
+		Port     int    `envconfig:"DB_PORT" default:"5432"`
+		MaxConn  int    `envconfig:"DB_MAX_CONN" default:"15"`
+	}
+
+	Auth struct {
+		ClientID     string `envconfig:"AUTH_CLIENT_ID"`
+		ClientSecret string `envconfig:"AUTH_CLIENT_SECRET"`
 	}
 }
 
 func Parse() (*Config, error) {
 	var cfg = &Config{}
+
+	//мое--------------------------------------------
+	err2 := godotenv.Load()
+	if err2 != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	err := envconfig.Process("", cfg)
 
 	if err != nil {
@@ -76,11 +94,11 @@ func (cfg Config) PgPoolConfig() (*pgxpool.Config, error) {
 }
 
 // Для Google аутентификации
-func SetupConfig() *oauth2.Config {
+func (cfg Config) SetupConfig() *oauth2.Config {
 	conf := &oauth2.Config{
-		RedirectURL:  "http://localhost:8080/callback",
-		ClientID:     "21646045870-l985handt84rtn20d5m0htd9a5t6a0rv.apps.googleusercontent.com",
-		ClientSecret: "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",
+		RedirectURL:  redirectURL,
+		ClientID:     cfg.Auth.ClientID,
+		ClientSecret: cfg.Auth.ClientSecret,
 		Scopes: []string{
 			"https://www.googleapis.com/auth/userinfo.email",
 			"https://www.googleapis.com/auth/userinfo.profile",
