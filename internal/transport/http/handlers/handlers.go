@@ -10,6 +10,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/Yury132/Golang-Task-1/internal/models"
+	"github.com/gorilla/sessions"
 	"github.com/rs/zerolog"
 )
 
@@ -29,6 +30,7 @@ var (
 	// Любая строка
 	oauthStateString = "pseudo-random"
 	info             models.Content
+	store            = sessions.NewCookieStore([]byte("super-secret-key"))
 )
 
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
@@ -64,9 +66,9 @@ func (h *Handler) Auth(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-// Google перенаправляет сюда
+// Google перенаправляет сюда, пользователь успешно авторизовался, создаем сессию
 func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
-	// TODO как привести к виду
+	// Получаем данные из гугла
 	content, err := h.service.GetUserInfo(r.FormValue("state"), r.FormValue("code"))
 	if err != nil {
 		h.log.Error().Err(err).Msg("callback...")
@@ -74,16 +76,37 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Заполняем структуру инфой из гугла, но не передаем ее на страницу
-
-	//var info models.Content
+	// Заполняем info, но не передаем ее на страницу
 	if err = json.Unmarshal(content, &info); err != nil {
 		h.log.Error().Err(err).Msg("filed to unmarshal struct")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Println(info.Name)
+	fmt.Println(info.Name, " заполнили все данные")
+
+	//------------------------------------------------------------------------------------------------
+	// Здесь нужно обратиться к БД и узнать есть ли такой пользователь в системе
+	//
+	// Если нет, создать его в БД
+	//
+	// И сохранить в обоих случаях данные пользователя в сессию
+
+	// Задаем жизнь сессии в секундах
+	// 10 мин
+	store.Options = &sessions.Options{
+		MaxAge: 60 * 10,
+	}
+	// Создаем сессию
+	session, err := store.Get(r, "session-name")
+	if err != nil {
+		h.log.Error().Err(err).Msg("session create failed")
+	}
+	// Устанавливаем значения в сессию
+	session.Values["authenticated"] = true
+	session.Values["Name"] = info.Name
+	session.Values["Email"] = info.Email
+	session.Save(r, w)
 
 	tmpl, err := template.ParseFiles("templates/auth_page.html")
 	if err != nil {
@@ -92,21 +115,59 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tmpl.Execute(w, nil)
-
 }
 
-// Google перенаправляет сюда
+// Информация о пользователе
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 
-	tmpl, err := template.ParseFiles("templates/auth_page.html")
+	// Получаем сессию
+	session, err := store.Get(r, "session-name")
 	if err != nil {
-		h.log.Error().Err(err).Msg("filed to show home page")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		h.log.Error().Err(err).Msg("session failed")
+		//w.WriteHeader(http.StatusInternalServerError)
+		//return
 	}
-	fmt.Println(info.Name)
-	tmpl.Execute(w, info)
 
+	// Проверяем, что пользователь залогинен
+	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
+		// Если нет
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		resp := make(map[string]string)
+		resp["сообщение"] = "Вы не авторизованы..."
+		jsonResp, err := json.Marshal(resp)
+		if err != nil {
+			h.log.Error().Err(err).Msg("Error happened in JSON marshal")
+		}
+		w.Write(jsonResp)
+	} else {
+		// Если да
+		// Читаем данные из сессии
+		info.Name = session.Values["Name"].(string)
+		info.Email = session.Values["Email"].(string)
+
+		tmpl, err := template.ParseFiles("templates/auth_page.html")
+		if err != nil {
+			h.log.Error().Err(err).Msg("filed to show home page")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		fmt.Println(info.Name, " успешно авторизован")
+		tmpl.Execute(w, info)
+	}
+}
+
+// Выход из системы, удаление сессии
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	session, err := store.Get(r, "session-name")
+	if err != nil {
+		h.log.Error().Err(err).Msg("session failed")
+	}
+	// Удаляем сессию
+	session.Options.MaxAge = -1
+	session.Save(r, w)
+	// Переадресуем пользователя на страницу логина
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func (h *Handler) GetUsersList(w http.ResponseWriter, r *http.Request) {

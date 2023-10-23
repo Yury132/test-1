@@ -15,8 +15,8 @@
         <div class="inner">
         <h3 class="masthead-brand">Задание №1</h3>
         <nav class="nav nav-masthead justify-content-center">
-            <a class="nav-link" href="/">Главная</a>
-            <a class="nav-link active" href="#">Авторизация</a>
+            <a class="nav-link" href="/">Главная страница</a>
+            <a class="nav-link active" href="/me">Подробная информация</a>
         </nav>
         </div>
     </header>
@@ -24,9 +24,10 @@
     <main role="main" class="inner cover">
         <h1 class="cover-heading">Вы авторизованы!</h1>
         <p class="lead">{{ .Name}}</p>
+        <p class="lead">{{ .Email}}</p>
         <p class="lead">
         <a href="/me" class="btn btn-lg btn-secondary">Информация обо мне</a>
-        <a href="/" class="btn btn-lg btn-secondary">Назад</a>
+        <a href="/logout" class="btn btn-lg btn-secondary">Выход из системы</a>
         </p>
     </main>
 

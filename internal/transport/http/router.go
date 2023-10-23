@@ -14,6 +14,7 @@ func InitRoutes(h *handlers.Handler) *mux.Router {
 	r.HandleFunc("/auth", h.Auth).Methods(http.MethodGet)
 	r.HandleFunc("/callback", h.Callback).Methods(http.MethodGet)
 	r.HandleFunc("/me", h.Me).Methods(http.MethodGet)
+	r.HandleFunc("/logout", h.Logout).Methods(http.MethodGet)
 	r.HandleFunc("/users-list", h.GetUsersList).Methods(http.MethodGet)
 
 	return r
