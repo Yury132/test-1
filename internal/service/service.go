@@ -15,6 +15,8 @@ const oauthStateString = "pseudo-random"
 type Service interface {
 	GetUserInfo(state string, code string) ([]byte, error)
 	GetUsersList(ctx context.Context) ([]models.User, error)
+	// Проверка на существование пользователя
+	CheckUser(ctx context.Context, email string) (bool, error)
 }
 
 type GoogleAPI interface {
@@ -23,6 +25,8 @@ type GoogleAPI interface {
 
 type Storage interface {
 	GetUsers(ctx context.Context) ([]models.User, error)
+	// Проверка на существование пользователя
+	CheckUser(ctx context.Context, email string) (bool, error)
 }
 
 type service struct {
@@ -58,6 +62,16 @@ func (s *service) GetUsersList(ctx context.Context) ([]models.User, error) {
 	}
 
 	return users, nil
+}
+
+// Проверка на существование пользователя
+func (s *service) CheckUser(ctx context.Context, email string) (bool, error) {
+	check, err := s.storage.CheckUser(ctx, email)
+	if err != nil {
+		return false, err
+	}
+
+	return check, nil
 }
 
 func New(logger zerolog.Logger, oauthConfig *oauth2.Config, googleAPI GoogleAPI, storage Storage) Service {

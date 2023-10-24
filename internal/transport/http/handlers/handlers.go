@@ -17,6 +17,8 @@ import (
 type Service interface {
 	GetUserInfo(state string, code string) ([]byte, error)
 	GetUsersList(ctx context.Context) ([]models.User, error)
+	// Проверка на существование пользователя
+	CheckUser(ctx context.Context, email string) (bool, error)
 }
 
 type Handler struct {
@@ -193,6 +195,27 @@ func (h *Handler) GetUsersList(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		h.log.Error().Err(err).Msg("failed to marshal users list")
+		return
+	}
+
+	w.Write(data)
+}
+
+// Проверка на существование пользователя
+func (h *Handler) CheckUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	check, err := h.service.CheckUser(r.Context(), "bob@mail.ru") //--------------------жестко передаем конкретное значение---------------
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		h.log.Error().Err(err).Msg("failed to check user")
+		return
+	}
+
+	data, err := json.Marshal(check)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		h.log.Error().Err(err).Msg("failed to marshal check user")
 		return
 	}
 
