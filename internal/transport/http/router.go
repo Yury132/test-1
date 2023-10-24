@@ -17,9 +17,9 @@ func InitRoutes(h *handlers.Handler) *mux.Router {
 	r.HandleFunc("/logout", h.Logout).Methods(http.MethodGet)
 	r.HandleFunc("/users-list", h.GetUsersList).Methods(http.MethodGet)
 	// Проверка на существование пользователя
-	r.HandleFunc("/get-user", h.CheckUser).Methods(http.MethodGet)
+	//r.HandleFunc("/get-user", h.CheckUser).Methods(http.MethodGet)
 	// Создание нового пользователя
-	r.HandleFunc("/create-user", h.CreateUser).Methods(http.MethodGet)
+	//r.HandleFunc("/create-user", h.CreateUser).Methods(http.MethodGet)
 
 	return r
 }

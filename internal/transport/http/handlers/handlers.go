@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"net/http"
 
@@ -70,7 +69,7 @@ func (h *Handler) Auth(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-// Google перенаправляет сюда, пользователь успешно авторизовался, создаем сессию
+// Google перенаправляет сюда, когда пользователь успешно авторизовался, создаем сессию
 func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	// Получаем данные из гугла
 	content, err := h.service.GetUserInfo(r.FormValue("state"), r.FormValue("code"))
@@ -87,14 +86,19 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(info.Name, " заполнили все данные")
-
-	//------------------------------------------------------------------------------------------------
-	// Здесь нужно обратиться к БД и узнать есть ли такой пользователь в системе
-	//
-	// Если нет, создать его в БД
-	//
-	// И сохранить в обоих случаях данные пользователя в сессию
+	// Обращаемся к БД и узнаем есть ли такой пользователь в системе
+	alive, err := CheckUser(r, h, info.Email)
+	if err != nil {
+		h.log.Error().Err(err).Msg("failed to check user...")
+		alive = false
+	}
+	// Если пользователя нет в БД, создаем его
+	if !alive {
+		err = CreateUser(r, h, info.Name, info.Email)
+		if err != nil {
+			h.log.Error().Err(err).Msg("failed to create user...")
+		}
+	}
 
 	// Задаем жизнь сессии в секундах
 	// 10 мин
@@ -107,6 +111,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		h.log.Error().Err(err).Msg("session create failed")
 	}
 	// Устанавливаем значения в сессию
+	// Сохраняем данные пользователя
 	session.Values["authenticated"] = true
 	session.Values["Name"] = info.Name
 	session.Values["Email"] = info.Email
@@ -165,7 +170,6 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		fmt.Println(info.Name, " успешно авторизован")
 		tmpl.Execute(w, info)
 	}
 }
@@ -204,45 +208,23 @@ func (h *Handler) GetUsersList(w http.ResponseWriter, r *http.Request) {
 }
 
 // Проверка на существование пользователя
-func (h *Handler) CheckUser(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	check, err := h.service.CheckUser(r.Context(), "bob@mail.ru") //--------------------жестко передаем конкретное значение---------------
+func CheckUser(r *http.Request, h *Handler, email string) (bool, error) {
+	check, err := h.service.CheckUser(r.Context(), email)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
 		h.log.Error().Err(err).Msg("failed to check user")
-		return
+		return false, err
 	}
-
-	data, err := json.Marshal(check)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		h.log.Error().Err(err).Msg("failed to marshal check user")
-		return
-	}
-
-	w.Write(data)
+	return check, nil
 }
 
 // Создание нового пользователя
-func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	err := h.service.CreateUser(r.Context(), "kirill", "kirill@mail.ru") //--------------------жестко передаем конкретное значение---------------
+func CreateUser(r *http.Request, h *Handler, name string, email string) error {
+	err := h.service.CreateUser(r.Context(), name, email)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
 		h.log.Error().Err(err).Msg("failed to create user")
-		return
+		return err
 	}
-
-	check := "Успешно добавили нового пользователя"
-	data, err := json.Marshal(check)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		h.log.Error().Err(err).Msg("failed to marshal create user")
-		return
-	}
-	w.Write(data)
+	return nil
 }
 
 func New(log zerolog.Logger, oauthConfig *oauth2.Config, service Service) *Handler {
@@ -252,5 +234,3 @@ func New(log zerolog.Logger, oauthConfig *oauth2.Config, service Service) *Handl
 		service:     service,
 	}
 }
-
-// content := { "id": "105118128147454782975", "email": "ivan.ivanov132132@gmail.com", "verified_email": true, "name": "YURIY USYNIN", "given_name": "YURIY", "family_name": "USYNIN", "picture": "https://lh3.googleusercontent.com/a/ACg8ocLJMKT2_vAvctEMY5iygMWj7CzaPLpRvujVH6-hYVJP=s96-c", "locale": "ru" }
