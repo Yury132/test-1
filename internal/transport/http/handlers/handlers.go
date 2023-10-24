@@ -19,6 +19,8 @@ type Service interface {
 	GetUsersList(ctx context.Context) ([]models.User, error)
 	// Проверка на существование пользователя
 	CheckUser(ctx context.Context, email string) (bool, error)
+	// Создание нового пользователя
+	CreateUser(ctx context.Context, name string, email string) error
 }
 
 type Handler struct {
@@ -219,6 +221,27 @@ func (h *Handler) CheckUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Write(data)
+}
+
+// Создание нового пользователя
+func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	err := h.service.CreateUser(r.Context(), "kirill", "kirill@mail.ru") //--------------------жестко передаем конкретное значение---------------
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		h.log.Error().Err(err).Msg("failed to create user")
+		return
+	}
+
+	check := "Успешно добавили нового пользователя"
+	data, err := json.Marshal(check)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		h.log.Error().Err(err).Msg("failed to marshal create user")
+		return
+	}
 	w.Write(data)
 }
 

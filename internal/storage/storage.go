@@ -11,6 +11,8 @@ type Storage interface {
 	GetUsers(ctx context.Context) ([]models.User, error)
 	// Проверка на существование пользователя
 	CheckUser(ctx context.Context, email string) (bool, error)
+	// Создание нового пользователя
+	CreateUser(ctx context.Context, name string, email string) error
 }
 
 type storage struct {
@@ -46,7 +48,8 @@ func (s *storage) GetUsers(ctx context.Context) ([]models.User, error) {
 // Проверка на существование пользователя
 func (s *storage) CheckUser(ctx context.Context, email string) (bool, error) {
 	query := "SELECT id, name, email FROM public.service_user WHERE email=$1"
-	//db.QueryRow("select * from Products where id = $1", 2)
+	// Пример: db.QueryRow("select * from Products where id = $1", 2)
+	// email подставляется вместо $1
 	rows, err := s.conn.Query(ctx, query, email)
 	if err != nil {
 		return false, err
@@ -69,6 +72,16 @@ func (s *storage) CheckUser(ctx context.Context, email string) (bool, error) {
 	}
 
 	return check, nil
+}
+
+// Создание нового пользователя
+func (s *storage) CreateUser(ctx context.Context, name string, email string) error {
+	query := "INSERT INTO public.service_user (name, email) values ($1, $2)"
+	_, err := s.conn.Exec(ctx, query, name, email)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func New(conn *pgxpool.Pool) Storage {

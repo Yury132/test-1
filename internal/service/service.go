@@ -17,6 +17,8 @@ type Service interface {
 	GetUsersList(ctx context.Context) ([]models.User, error)
 	// Проверка на существование пользователя
 	CheckUser(ctx context.Context, email string) (bool, error)
+	// Создание нового пользователя
+	CreateUser(ctx context.Context, name string, email string) error
 }
 
 type GoogleAPI interface {
@@ -27,6 +29,8 @@ type Storage interface {
 	GetUsers(ctx context.Context) ([]models.User, error)
 	// Проверка на существование пользователя
 	CheckUser(ctx context.Context, email string) (bool, error)
+	// Создание нового пользователя
+	CreateUser(ctx context.Context, name string, email string) error
 }
 
 type service struct {
@@ -72,6 +76,16 @@ func (s *service) CheckUser(ctx context.Context, email string) (bool, error) {
 	}
 
 	return check, nil
+}
+
+// Создание нового пользователя
+func (s *service) CreateUser(ctx context.Context, name string, email string) error {
+	err := s.storage.CreateUser(ctx, name, email)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func New(logger zerolog.Logger, oauthConfig *oauth2.Config, googleAPI GoogleAPI, storage Storage) Service {
