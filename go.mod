@@ -3,8 +3,11 @@ module github.com/Yury132/Golang-Task-1
 go 1.20
 
 require (
+	github.com/gorilla/sessions v1.2.1
 	github.com/jackc/pgx/v5 v5.4.3
+	github.com/joho/godotenv v1.5.1
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/pressly/goose v2.7.0+incompatible
 	github.com/rs/zerolog v1.31.0
 )
 
@@ -13,8 +16,6 @@ require (
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/gorilla/securecookie v1.1.1 // indirect
-	github.com/gorilla/sessions v1.2.1 // indirect
-	github.com/joho/godotenv v1.5.1 // indirect
 	golang.org/x/net v0.16.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect

@@ -131,15 +131,24 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	// Проверяем, что пользователь залогинен
 	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
 		// Если нет
+		// w.WriteHeader(http.StatusUnauthorized)
+		// w.Header().Set("Content-Type", "application/json")
+		// resp := make(map[string]string)
+		// resp["сообщение"] = "Вы не авторизованы..."
+		// jsonResp, err := json.Marshal(resp)
+		// if err != nil {
+		// 	h.log.Error().Err(err).Msg("Error happened in JSON marshal")
+		// }
+		// w.Write(jsonResp)
+		//
+		tmpl, err := template.ParseFiles("templates/error.html")
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Header().Set("Content-Type", "application/json")
-		resp := make(map[string]string)
-		resp["сообщение"] = "Вы не авторизованы..."
-		jsonResp, err := json.Marshal(resp)
 		if err != nil {
-			h.log.Error().Err(err).Msg("Error happened in JSON marshal")
+			h.log.Error().Err(err).Msg("filed to show error page")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
-		w.Write(jsonResp)
+		tmpl.Execute(w, nil)
 	} else {
 		// Если да
 		// Читаем данные из сессии
