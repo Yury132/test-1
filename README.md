@@ -20,15 +20,32 @@
 ```
 git clone https://github.com/Yury132/Golang-Task-1.git
 ```
-- Установить PostgreSQL в Docker контейнер, используя docker-compose.yml файл.
+- Установить PostgreSQL в Docker контейнер, используя docker-compose.yml файл из проекта
   
-1. Скопировать compose файл в новую папку
+1. Скопировать docker-compose.yml в новую папку "postgresql"
   
-2. Выполнить в терминала команду
+2. Выполнить в терминале команду
 ```
 docker compose up
 ```
+- Подключиться к базе данных PostgreSQL (Например, через DBeaver)
 
+POSTGRES_DB: mydb
+
+POSTGRES_USER: root
+
+POSTGRES_PASSWORD: mydbpass
+
+Port: 5432
+
+Host: localhost
+
+- Скопировать полученный файл .env по пути Golang-Task-1/cmd
+
+- Запустить веб-приложение по пути Golang-Task-1/cmd командой
+```
+go run main.go
+```
 
 
 <h1 align="center">Тестирование</h1>
