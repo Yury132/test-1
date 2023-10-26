@@ -1,5 +1,4 @@
-<h1 align="center">Задание №1 
-<img src="https://github.com/blackcater/blackcater/raw/main/images/Hi.gif" height="32"/></h1>
+<h1 align="center">Задание №1</h1>
 <h3 align="left">Необходимо создать сервис реализующий авторизацию через Google OAuth2.
 
 Сервис должен выполнять следующий сценарий:
@@ -40,7 +39,7 @@ Port: 5432
 
 Host: localhost
 
-- Скопировать полученный файл .env по пути Golang-Task-1/cmd
+- Скопировать полученный файл .env по пути Golang-Task-1/internal/config
 
 - Запустить веб-приложение по пути Golang-Task-1/cmd командой
 ```
