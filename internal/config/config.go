@@ -53,12 +53,13 @@ type Config struct {
 func Parse() (*Config, error) {
 	var cfg = &Config{}
 
-	//envFile := filepath.Join("test-1", "internal", "config", ".env")
+	// Загружаем в переменные окружения из .env
 	err := godotenv.Load(envFile)
 	if err != nil {
 		return nil, errors.Wrap(err, "error loading .env file")
 	}
 
+	// Загружаем в envconfig
 	err = envconfig.Process("", cfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to process env vars")
@@ -81,6 +82,7 @@ func (cfg Config) Logger() (logger zerolog.Logger) {
 	return zerolog.New(out).Level(level).With().Caller().Timestamp().Logger()
 }
 
+// Получаем адрес в БД
 func (cfg Config) GetDBConnString() string {
 	return fmt.Sprintf(
 		"host=%s port=%d dbname=%s sslmode=disable user=%s password=%s",
@@ -97,7 +99,7 @@ func (cfg Config) PgPoolConfig() (*pgxpool.Config, error) {
 	return poolCfg, nil
 }
 
-// Для Google аутентификации
+// Для Гугл аутентификации
 func (cfg Config) SetupConfig() *oauth2.Config {
 	conf := &oauth2.Config{
 		RedirectURL:  redirectURL,

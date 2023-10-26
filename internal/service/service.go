@@ -11,6 +11,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// Рандомная строка
 const oauthStateString = "pseudo-random"
 
 type Service interface {
@@ -24,6 +25,7 @@ type GoogleAPI interface {
 }
 
 type Storage interface {
+	// Все пользователи в БД
 	GetUsers(ctx context.Context) ([]models.User, error)
 	// Проверка на существование пользователя
 	CheckUser(ctx context.Context, email string) (bool, error)
@@ -38,7 +40,7 @@ type service struct {
 	storage     Storage
 }
 
-// Получаем данные о пользователи из Google
+// Получаем данные о пользователи из Гугл
 func (s *service) GetUserInfo(state string, code string) ([]byte, error) {
 	if state != oauthStateString {
 		return nil, fmt.Errorf("invalid oauth state")
@@ -57,6 +59,7 @@ func (s *service) GetUserInfo(state string, code string) ([]byte, error) {
 	return contents, nil
 }
 
+// Все пользователи в БД
 func (s *service) GetUsersList(ctx context.Context) ([]models.User, error) {
 	users, err := s.storage.GetUsers(ctx)
 	if err != nil {
@@ -66,6 +69,7 @@ func (s *service) GetUsersList(ctx context.Context) ([]models.User, error) {
 	return users, nil
 }
 
+// Проверка существования пользователя в БД и его создание при необходимости
 func (s *service) HandleUser(ctx context.Context, name string, email string) error {
 	ok, err := s.checkUser(ctx, email)
 	if err != nil {

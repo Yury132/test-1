@@ -30,23 +30,9 @@ var (
 	// Любая строка
 	oauthStateString = "pseudo-random"
 	info             models.Content
-	store            = sessions.NewCookieStore([]byte("super-secret-key"))
+	// Сессия
+	store = sessions.NewCookieStore([]byte("super-secret-key"))
 )
-
-func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	data := "{\"health\": \"ok\"}"
-
-	response, err := json.Marshal(data)
-	if err != nil {
-		h.log.Error().Err(err).Msg("filed to marshal response data")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.Write(response)
-}
 
 // Стартовая страница
 func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
@@ -60,13 +46,13 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, nil)
 }
 
-// Авторизация через Google
+// Авторизация через Гугл
 func (h *Handler) Auth(w http.ResponseWriter, r *http.Request) {
 	url := h.oauthConfig.AuthCodeURL(oauthStateString)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-// Google перенаправляет сюда, когда пользователь успешно авторизовался, создаем сессию
+// Гугл перенаправляет сюда, когда пользователь успешно авторизовался, создаем сессию
 func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	// Получаем данные из гугла
 	content, err := h.service.GetUserInfo(r.FormValue("state"), r.FormValue("code"))
@@ -170,6 +156,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+// Все пользователи в БД
 func (h *Handler) GetUsersList(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 

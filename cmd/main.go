@@ -32,33 +32,36 @@ func main() {
 		panic(err)
 	}
 
+	// Логгер
 	logger := cfg.Logger()
 
 	// Миграции
 	db, err := goose.OpenDBWithDriver(dialect, cfg.GetDBConnString())
 	if err != nil {
-		logger.Fatal().Err(err).Msg("filed to open db by goose")
+		logger.Fatal().Err(err).Msg("failed to open db by goose")
 	}
 
-	// newDir Как правильно указать путь? в том числе к шаблонам html
 	if err = goose.Run(commandUp, db, migrationsPath); err != nil {
 		logger.Fatal().Msgf("migrate %v: %v", commandUp, err)
 	}
 
 	if err = db.Close(); err != nil {
-		logger.Fatal().Err(err).Msg("filed to close db connection by goose")
+		logger.Fatal().Err(err).Msg("failed to close db connection by goose")
 	}
 
+	// Настройка БД
 	poolCfg, err := cfg.PgPoolConfig()
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to connect to DB")
 	}
 
+	// Подключение к БД
 	conn, err := pgxpool.NewWithConfig(context.Background(), poolCfg)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to connect to db")
 	}
 
+	// Гугл
 	oauthCfg := cfg.SetupConfig()
 
 	googleAPI := google.New(logger)
@@ -72,6 +75,7 @@ func main() {
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, syscall.SIGINT)
 
+	// Запусвкаем сервер
 	go func() {
 		if err = srv.Run(); err != nil {
 			logger.Fatal().Err(err).Msg("failed to start server")

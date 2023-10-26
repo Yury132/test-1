@@ -19,6 +19,7 @@ type storage struct {
 	conn *pgxpool.Pool
 }
 
+// Все пользователи в БД
 func (s *storage) GetUsers(ctx context.Context) ([]models.User, error) {
 	query := "SELECT id, name, email FROM public.service_user"
 
