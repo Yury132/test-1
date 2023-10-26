@@ -16,10 +16,7 @@ import (
 type Service interface {
 	GetUserInfo(state string, code string) ([]byte, error)
 	GetUsersList(ctx context.Context) ([]models.User, error)
-	// Проверка на существование пользователя
-	CheckUser(ctx context.Context, email string) (bool, error)
-	// Создание нового пользователя
-	CreateUser(ctx context.Context, name string, email string) error
+	HandleUser(ctx context.Context, name string, email string) error
 }
 
 type Handler struct {
@@ -54,7 +51,7 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 // Стартовая страница
 func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 
-	tmpl, err := template.ParseFiles("templates/home_page.html")
+	tmpl, err := template.ParseFiles("../internal/templates/home_page.html")
 	if err != nil {
 		h.log.Error().Err(err).Msg("filed to show home page")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -86,18 +83,10 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Обращаемся к БД и узнаем есть ли такой пользователь в системе
-	alive, err := CheckUser(r, h, info.Email)
-	if err != nil {
-		h.log.Error().Err(err).Msg("failed to check user...")
-		alive = false
-	}
-	// Если пользователя нет в БД, создаем его
-	if !alive {
-		err = CreateUser(r, h, info.Name, info.Email)
-		if err != nil {
-			h.log.Error().Err(err).Msg("failed to create user...")
-		}
+	if err = h.service.HandleUser(r.Context(), info.Name, info.Email); err != nil {
+		h.log.Error().Err(err).Msg("filed to handle user")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	// Задаем жизнь сессии в секундах
@@ -115,9 +104,13 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	session.Values["authenticated"] = true
 	session.Values["Name"] = info.Name
 	session.Values["Email"] = info.Email
-	session.Save(r, w)
+	if err = session.Save(r, w); err != nil {
+		h.log.Error().Err(err).Msg("filed to save session")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
-	tmpl, err := template.ParseFiles("templates/auth_page.html")
+	tmpl, err := template.ParseFiles("../internal/templates/auth_page.html")
 	if err != nil {
 		h.log.Error().Err(err).Msg("filed to show home page")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -140,17 +133,7 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	// Проверяем, что пользователь залогинен
 	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
 		// Если нет
-		// w.WriteHeader(http.StatusUnauthorized)
-		// w.Header().Set("Content-Type", "application/json")
-		// resp := make(map[string]string)
-		// resp["сообщение"] = "Вы не авторизованы..."
-		// jsonResp, err := json.Marshal(resp)
-		// if err != nil {
-		// 	h.log.Error().Err(err).Msg("Error happened in JSON marshal")
-		// }
-		// w.Write(jsonResp)
-		//
-		tmpl, err := template.ParseFiles("templates/error.html")
+		tmpl, err := template.ParseFiles("../internal/templates/error.html")
 		w.WriteHeader(http.StatusUnauthorized)
 		if err != nil {
 			h.log.Error().Err(err).Msg("filed to show error page")
@@ -164,7 +147,7 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		info.Name = session.Values["Name"].(string)
 		info.Email = session.Values["Email"].(string)
 
-		tmpl, err := template.ParseFiles("templates/auth_page.html")
+		tmpl, err := template.ParseFiles("../internal/templates/auth_page.html")
 		if err != nil {
 			h.log.Error().Err(err).Msg("filed to show home page")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -205,26 +188,6 @@ func (h *Handler) GetUsersList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(data)
-}
-
-// Проверка на существование пользователя
-func CheckUser(r *http.Request, h *Handler, email string) (bool, error) {
-	check, err := h.service.CheckUser(r.Context(), email)
-	if err != nil {
-		h.log.Error().Err(err).Msg("failed to check user")
-		return false, err
-	}
-	return check, nil
-}
-
-// Создание нового пользователя
-func CreateUser(r *http.Request, h *Handler, name string, email string) error {
-	err := h.service.CreateUser(r.Context(), name, email)
-	if err != nil {
-		h.log.Error().Err(err).Msg("failed to create user")
-		return err
-	}
-	return nil
 }
 
 func New(log zerolog.Logger, oauthConfig *oauth2.Config, service Service) *Handler {

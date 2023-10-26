@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -19,30 +18,13 @@ import (
 )
 
 const (
-	dialect  = "pgx"
-	dbString = "host=localhost user=root password=mydbpass dbname=mydb port=5432 sslmode=disable"
-	command  = "up"
-	newDir   = "migrations"
+	dialect        = "pgx"
+	commandUp      = "up"
+	commandDown    = "down"
+	migrationsPath = "../internal/migrations"
 )
 
 func main() {
-
-	// Миграции
-	db, err := goose.OpenDBWithDriver(dialect, dbString)
-	if err != nil {
-		log.Fatalf(err.Error())
-	}
-
-	defer func() {
-		if err := db.Close(); err != nil {
-			log.Fatalf(err.Error())
-		}
-	}()
-
-	// newDir Как правильно указать путь? в том числе к шаблонам html
-	if err := goose.Run(command, db, newDir); err != nil {
-		log.Fatalf("migrate %v: %v", command, err)
-	}
 
 	// Конфигурации
 	cfg, err := config.Parse()
@@ -51,6 +33,21 @@ func main() {
 	}
 
 	logger := cfg.Logger()
+
+	// Миграции
+	db, err := goose.OpenDBWithDriver(dialect, cfg.GetDBConnString())
+	if err != nil {
+		logger.Fatal().Err(err).Msg("filed to open db by goose")
+	}
+
+	// newDir Как правильно указать путь? в том числе к шаблонам html
+	if err = goose.Run(commandUp, db, migrationsPath); err != nil {
+		logger.Fatal().Msgf("migrate %v: %v", commandUp, err)
+	}
+
+	if err = db.Close(); err != nil {
+		logger.Fatal().Err(err).Msg("filed to close db connection by goose")
+	}
 
 	poolCfg, err := cfg.PgPoolConfig()
 	if err != nil {
